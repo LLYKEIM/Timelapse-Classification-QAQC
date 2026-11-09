@@ -114,6 +114,23 @@ ui <- page_sidebar(
     .ep-strip .vid { width: 100px; background: #333; color: #fff; font-size: 0.75rem;
                      display: flex; align-items: center; justify-content: center; }
     .ep-strip a.flagged img { outline: 2px dashed var(--bs-danger); outline-offset: -2px; }
+    .media-wrap { position: relative; }
+    .ep-arrow { position: absolute; top: 50%; transform: translateY(-50%); z-index: 2;
+                width: 44px; height: 64px; border: none; border-radius: 6px;
+                background: rgba(0,0,0,0.55); color: #fff; font-size: 2.6rem; line-height: 1;
+                display: flex; align-items: center; justify-content: center; padding: 0 0 6px; }
+    .ep-arrow:hover { background: rgba(0,0,0,0.8); }
+    .ep-arrow.left { left: 8px; } .ep-arrow.right { right: 8px; }
+    .ep-strip .cap { font-size: 0.7rem; color: var(--bs-secondary-color); max-width: 100px;
+                     overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ep-tags { font-size: 0.85rem; background: var(--bs-tertiary-bg); border-radius: 6px;
+               padding: 6px 8px; margin-bottom: 8px; max-height: 22vh; overflow-y: auto; }
+    .ep-tag { padding: 3px 0; border-top: 1px solid var(--bs-border-color); }
+    .ep-tag:first-of-type { border-top: none; }
+    .ep-tag.here { border-left: 3px solid var(--bs-primary); padding-left: 6px; }
+    .effort-stat { padding: 4px 0; }
+    .effort-num { font-size: 1.6rem; font-weight: 600; line-height: 1.1; }
+    .effort-total .effort-num { color: var(--bs-success); }
     .edit-form { max-height: 62vh; overflow-y: auto; padding-right: 6px; }
     .edit-form .form-group, .edit-form .shiny-input-container { margin-bottom: 0.5rem; }
     .edit-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 10px; }
@@ -125,16 +142,14 @@ ui <- page_sidebar(
     actionButton("browse", "Choose .ddb file…", icon = icon("folder-open"),
                  class = "btn-primary w-100"),
     helpText("Pick the .ddb in the folder you classified. The file dialog can open behind your browser window."),
-    textInput("path_text", "…or paste the full path to the .ddb", width = "100%",
-              placeholder = "C:/Cameras/BAN-042/TimelapseData.ddb"),
-    actionButton("load_path", "Load", class = "btn-outline-secondary w-100"),
     actionButton("rerun", "Re-run checks", icon = icon("rotate"),
                  class = "btn-outline-secondary w-100"),
     uiOutput("template_status"),
     div(class = "alert alert-warning small mb-0",
         strong("Before editing: "),
         "close this folder in Timelapse. A backup copy of the .ddb is saved next to it before your first change."),
-    uiOutput("download_ui")
+    uiOutput("download_ui"),
+    uiOutput("changes_ui")
   ),
   uiOutput("summary_ui"),
   navset_underline(
@@ -165,6 +180,12 @@ server <- function(input, output, session) {
   reload     <- reactiveVal(0)
   backed_up  <- reactiveVal(character(0))
   viewer     <- reactiveVal(NULL)
+  # Every field saved in this session: one row per field changed
+  changes    <- reactiveVal(data.frame(
+    saved_at = character(), ddb = character(), id = character(), image = character(),
+    image_datetime = character(), field = character(), old_value = character(),
+    new_value = character(), stringsAsFactors = FALSE
+  ))
 
   # Loading a .ddb ------------------------------------------------------------
   set_path <- function(p) {
@@ -177,21 +198,11 @@ server <- function(input, output, session) {
     ))
     ddb_path(p)
     viewer(NULL)
-    updateTextInput(session, "path_text", value = p)
   }
 
   observeEvent(input$browse, {
     p <- choose_ddb()
     if (!is.null(p)) set_path(p)
-  })
-
-  observeEvent(input$load_path, {
-    p <- trimws(gsub('^"|"$', "", trimws(input$path_text)))  # allow quoted paths
-    if (p == "" || !file.exists(p) || dir.exists(p)) {
-      showNotification("No .ddb file found at that path.", type = "error")
-    } else {
-      set_path(normalizePath(p, winslash = "/"))
-    }
   })
 
   observeEvent(input$rerun, reload(reload() + 1))
@@ -260,8 +271,67 @@ server <- function(input, output, session) {
       p(class = "text-muted small mt-2",
         strong("Location: "), if (length(s$locations)) paste(s$locations, collapse = ", ") else "none",
         HTML(" &nbsp;\u00B7&nbsp; "),
-        strong("Classifier: "), if (length(s$classifiers)) paste(s$classifiers, collapse = ", ") else "none")
+        strong("Classifier: "), if (length(s$classifiers)) paste(s$classifiers, collapse = ", ") else "none"),
+      effort_ui(s$effort)
     )
+  })
+
+  # Noon timelapse images, CameraObscured tags and camera effort
+  effort_ui <- function(e) {
+    if (is.null(e) || e$total_days == 0) return(NULL)
+    n_tl <- length(e$timelapse_ids)
+    n_miss <- length(e$missing_noon)
+    n_obs_tags <- length(e$obscured_ids)
+    n_obs_days <- length(e$obscured_days)
+    card(
+      fill = FALSE, class = "mb-3",
+      card_header(class = "d-flex flex-wrap align-items-center gap-2",
+                  span(icon("calendar-days"), " Camera effort"),
+                  span(class = "small text-muted",
+                       format(e$first, "%b %d, %Y"), " to ", format(e$last, "%b %d, %Y"))),
+      card_body(
+        layout_columns(
+          fill = FALSE, col_widths = breakpoints(sm = c(6, 6, 6, 6), lg = c(3, 3, 3, 3)),
+          div(class = "effort-stat",
+              div(class = "effort-num", e$total_days),
+              div("Total days"),
+              div(class = "small text-muted", "first to last image")),
+          div(class = "effort-stat",
+              div(class = "effort-num", n_tl),
+              div("Noon timelapse images"),
+              div(class = paste("small", if (n_miss > 0) "text-warning-emphasis" else "text-muted"),
+                  if (n_tl == 0) "none found" else if (n_miss > 0)
+                    sprintf("%d day%s with no noon image", n_miss, if (n_miss == 1) "" else "s")
+                  else "one every day")),
+          div(class = "effort-stat",
+              div(class = "effort-num", n_obs_days),
+              div("Days camera obscured"),
+              div(class = "small text-muted",
+                  sprintf("%d CameraObscured tag%s", n_obs_tags, if (n_obs_tags == 1) "" else "s"))),
+          div(class = "effort-stat effort-total",
+              div(class = "effort-num", e$effort_days),
+              div(strong("Camera effort (days)")),
+              div(class = "small text-muted",
+                  sprintf("%d total \u2212 %d obscured", e$total_days, n_obs_days)))
+        ),
+        div(class = "d-flex flex-wrap gap-2 mt-2",
+            if (n_tl > 0) actionButton("review_noon", "Review noon images",
+                                       icon = icon("sun"), class = "btn-sm btn-outline-secondary"),
+            if (n_obs_tags > 0) actionButton("review_obscured", "Review CameraObscured images",
+                                             icon = icon("eye-slash"),
+                                             class = "btn-sm btn-outline-secondary"))
+      )
+    )
+  }
+
+  observeEvent(input$review_noon, {
+    e <- result()$summary$effort; req(length(e$timelapse_ids) > 0)
+    open_viewer("Noon timelapse images", e$timelapse_ids, e$timelapse_ids[1])
+  })
+
+  observeEvent(input$review_obscured, {
+    e <- result()$summary$effort; req(length(e$obscured_ids) > 0)
+    open_viewer("CameraObscured images", e$obscured_ids, e$obscured_ids[1])
   })
 
   output$issues_ui <- renderUI({
@@ -297,6 +367,27 @@ server <- function(input, output, session) {
     },
     content = function(file) {
       write.csv(issues_to_csv_table(result()$issues), file, row.names = FALSE)
+    }
+  )
+
+  output$changes_ui <- renderUI({
+    n <- nrow(changes())
+    if (n == 0) return(NULL)
+    tagList(
+      downloadButton("download_changes", "Download tagging changes (CSV)",
+                     class = "btn-outline-primary w-100"),
+      div(class = "small text-muted mt-1",
+          sprintf("%d field%s changed this session. Download before closing the app.",
+                  n, if (n == 1) "" else "s"))
+    )
+  })
+
+  output$download_changes <- downloadHandler(
+    filename = function() {
+      paste0("tagging_changes_", format(Sys.time(), "%Y%m%d-%H%M%S"), ".csv")
+    },
+    content = function(file) {
+      write.csv(changes(), file, row.names = FALSE)
     }
   )
 
@@ -465,10 +556,56 @@ server <- function(input, output, session) {
     }
 
     # Other images in the same episode, as clickable thumbnails
-    ep <- d[d$EpManual == row$EpManual, , drop = FALSE]
-    ep <- ep[order(ep$DateTime, as.numeric(ep$Id)), , drop = FALSE]
-    k <- match(row$Id, ep$Id)
-    ep <- ep[max(1, k - 10):min(nrow(ep), k + 10), , drop = FALSE]
+    ep_all <- d[d$EpManual == row$EpManual, , drop = FALSE]
+    ep_all <- ep_all[order(ep_all$DateTime, as.numeric(ep_all$Id)), , drop = FALSE]
+    k <- match(row$Id, ep_all$Id)
+    n_ep <- nrow(ep_all)
+    ep <- ep_all[max(1, k - 10):min(n_ep, k + 10), , drop = FALSE]
+
+    # Arrows over the image: step through every image in this episode
+    ep_arrow <- function(side, to) {
+      if (is.null(to)) return(NULL)
+      tags$button(type = "button", class = paste("ep-arrow", side),
+                  title = if (side == "left") "Previous image in this episode" else "Next image in this episode",
+                  onclick = js_jump(to),
+                  if (side == "left") "\u2039" else "\u203A")
+    }
+    media <- div(class = "media-wrap", media,
+                 ep_arrow("left", if (k > 1) ep_all$Id[k - 1]),
+                 ep_arrow("right", if (k < n_ep) ep_all$Id[k + 1]))
+
+    # The tags in this episode, shown on every image in it
+    ep_tagged <- ep_all[ep_all$Id %in% res$classified_ids, , drop = FALSE]
+    tag_line <- function(x) {
+      parts <- c(
+        if (x$Total != "") paste("Total", x$Total),
+        age_sex_summary(x),
+        x$ColourMarkings %||% "",
+        x$Behaviour %||% "",
+        x$DirectionTravel %||% "",
+        if (identical(x$CameraServicing, "Yes")) "Servicing",
+        if (identical(x$Illegal, "Yes")) "Illegal",
+        if (x$CommentsImages != "") paste0("\u201c", x$CommentsImages, "\u201d")
+      )
+      paste(parts[parts != ""], collapse = " \u00B7 ")
+    }
+    ep_tags <- div(
+      class = "ep-tags",
+      div(class = "fw-semibold mb-1",
+          if (n_ep == 1) "Tags on this image" else sprintf("Tags in this episode (%d image%s tagged)",
+                                                           nrow(ep_tagged), if (nrow(ep_tagged) == 1) "" else "s")),
+      if (nrow(ep_tagged) == 0) div(class = "text-muted", "Nothing tagged in this episode yet."),
+      lapply(seq_len(nrow(ep_tagged)), function(j) {
+        x <- ep_tagged[j, , drop = FALSE]
+        here <- x$Id == row$Id
+        div(class = paste("ep-tag", if (here) "here"),
+            strong(if (x$Species != "") x$Species else "(no species)"),
+            if (tag_line(x) != "") span(" \u2013 ", tag_line(x)),
+            div(class = "small text-muted",
+                if (here) "this image" else tags$a(href = "#", onclick = js_jump(x$Id),
+                                                   paste("on", x$FileName))))
+      })
+    )
     flagged_ids <- unique(unlist(res$issues$ids))
     strip <- div(class = "ep-strip", lapply(seq_len(nrow(ep)), function(j) {
       cls <- paste(if (ep$Id[j] == row$Id) "current", if (ep$Id[j] %in% flagged_ids) "flagged")
@@ -478,9 +615,9 @@ server <- function(input, output, session) {
       } else {
         tags$img(src = image_url(base, ep$RelativePath[j], ep$FileName[j]), loading = "lazy")
       }
-      tags$a(href = "#", class = cls, title = tip, onclick = js_jump(ep$Id[j]), thumb)
+      tags$a(href = "#", class = cls, title = tip, onclick = js_jump(ep$Id[j]), thumb,
+             div(class = "cap", if (ep$Species[j] != "") ep$Species[j] else HTML("&nbsp;")))
     }))
-    n_ep <- sum(d$EpManual == row$EpManual)
 
     # Checks that flagged this image
     other <- res$issues$check[vapply(res$issues$ids, function(x) row$Id %in% x, logical(1))]
@@ -547,11 +684,12 @@ server <- function(input, output, session) {
         col_widths = breakpoints(sm = c(12, 12), lg = c(8, 4)),
         div(media,
             div(class = "small text-muted mt-2",
-                sprintf("Episode %s: %d image%s (blue = this image, dashed = flagged; hover for species)",
-                        row$EpManual, n_ep, if (n_ep == 1) "" else "s"),
+                sprintf("Episode %s: image %d of %d (blue = this image, dashed = flagged). Use the arrows on the image to step through the episode.",
+                        row$EpManual, k, n_ep),
                 if (n_ep > nrow(ep)) " \u2013 showing the 21 nearest"),
             strip),
         div(
+          ep_tags,
           div(class = "edit-form", form_blocks),
           actionButton("save_edit", "Save changes", icon = icon("floppy-disk"),
                        class = "btn-primary w-100 mt-2")
@@ -588,6 +726,14 @@ server <- function(input, output, session) {
         showNotification(paste("Backup saved:", basename(bak)), duration = 6)
       }
       write_ddb_fields(path, v$current, changed)
+      changes(rbind(changes(), data.frame(
+        saved_at = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
+        ddb = path, id = as.character(v$current), image = row$Label,
+        image_datetime = row$DateTime, field = names(changed),
+        old_value = vapply(names(changed), function(f) as.character(row[[f]]), character(1)),
+        new_value = vapply(changed, as.character, character(1)),
+        stringsAsFactors = FALSE, row.names = NULL
+      )))
       showNotification(sprintf("Saved %s for %s", paste(names(changed), collapse = ", "), row$Label),
                        type = "message", duration = 4)
       reload(reload() + 1)  # re-run the checks with the new values

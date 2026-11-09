@@ -31,7 +31,7 @@ hosting, so no data leaves the machine.
 ## 2. Where things stand (v0.3, Nov 2026)
 
 Working, per testing on Maddy's machine:
-- Choose a .ddb by file dialog or pasted path
+- Choose a .ddb by file dialog (the pasted-path box was removed in v0.4)
 - All checks from the original script, grouped into Fix / Check / Note cards, plus CSV export
 - Image viewer with episode thumbnail strip, previous/next, edit form, save with automatic
   backup, re-check after save
