@@ -6,8 +6,9 @@ on Windows. The roadmap is in `docs/WORKPLAN.md`; work through it one phase at a
 
 ## Commands
 
-- Run the app: `Rscript run_app.R` (what users do: open `run_app.R` in RStudio and click Source).
-  It installs shiny if missing; `app.R` installs the other packages if missing.
+- Run the app: `Rscript -e 'shiny::runApp(".", launch.browser = TRUE)'` (what users do: open
+  `app.R` in RStudio and click Run App). `app.R` is the only entry point; it installs any
+  missing packages on launch.
 - Run checks without the UI:
   `source("R/checks.R"); run_checks(read_timelapse_ddb("test_folder/TimelapseData.ddb"))$issues`
 - Tests (once Phase 1 exists): `Rscript -e 'testthat::test_dir("tests/testthat")'`
