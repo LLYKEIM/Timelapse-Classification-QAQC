@@ -31,6 +31,13 @@ COUNT_COLS <- c("Total", "AdultFemale", "AdultMale", "AdultUnknown",
 HUMANS <- c("Biker", "Hiker", "Horse Rider", "Quad/Vehicle/Motorbike",
             "Snowmobile", "Skier", "Snowshoer", "Runner", "Watercraft")
 
+# Species values that aren't an animal (used by the CameraObscured same-day check)
+NOT_ANIMALS <- c(HUMANS, "CameraObscured", "FirstImage", "LastImage", "None")
+
+# The camera takes a timelapse image at noon each day. Any image taken between
+# 12:00:00 and 12:00:59 counts as that day's noon image.
+TIMELAPSE_TIME <- "12:00"
+
 
 # Read the DataTable from a Timelapse .ddb file --------------------------------
 read_timelapse_ddb <- function(path) {
@@ -99,6 +106,70 @@ prepare_timelapse <- function(TL_data) {
     )
 
   list(TL_data = TL_data, a = a, MD = MD)
+}
+
+
+# Noon timelapse images, CameraObscured tags and camera effort -----------------
+# TL_data is the formatted DataTable from prepare_timelapse().
+#   total_days:    calendar days from the first image to the last (both included)
+#   obscured_days: days with at least one CameraObscured tag
+#   effort_days:   total_days - number of obscured days
+#   missing_noon:  days the camera was out at noon but has no noon image
+summarise_effort <- function(TL_data) {
+  dt <- suppressWarnings(as_datetime(TL_data$DateTime))
+  ok <- !is.na(dt)
+  empty_date <- as.Date(character(0))
+  if (!any(ok)) {
+    return(list(total_days = 0L, first = NA, last = NA, timelapse_ids = character(0),
+                timelapse_dates = empty_date, missing_noon = empty_date,
+                obscured_ids = character(0), obscured_days = empty_date, effort_days = 0L))
+  }
+  day <- as.Date(dt)
+  clock <- format(dt, "%H:%M:%S")
+
+  first <- min(dt[ok]); last <- max(dt[ok])
+  first_day <- as.Date(first); last_day <- as.Date(last)
+  total_days <- as.integer(last_day - first_day) + 1L
+
+  # Noon images: the earliest image in the noon minute on each day
+  is_noon <- ok & substr(clock, 1, 5) == TIMELAPSE_TIME
+  noon <- TL_data[is_noon, , drop = FALSE]
+  noon$day <- day[is_noon]
+  noon$dt <- dt[is_noon]
+  noon <- noon[order(noon$dt, as.numeric(noon$Id)), , drop = FALSE]
+  noon <- noon[!duplicated(noon$day), , drop = FALSE]
+
+  # Days the camera was out at noon: skip the first day if it was set up after
+  # noon, and the last day if it was picked up before noon
+  noon_start <- paste0(TIMELAPSE_TIME, ":00"); noon_end <- paste0(TIMELAPSE_TIME, ":59")
+  from <- first_day + if (format(first, "%H:%M:%S") > noon_end) 1L else 0L
+  to   <- last_day  - if (format(last, "%H:%M:%S") < noon_start) 1L else 0L
+  expected <- if (from <= to) seq(from, to, by = "day") else empty_date
+  missing_noon <- if (nrow(noon) > 0) expected[!expected %in% noon$day] else empty_date
+
+  is_obscured <- TL_data$Species == "CameraObscured"
+  obscured_days <- sort(unique(day[is_obscured & ok]))
+
+  list(
+    total_days      = total_days,
+    first           = first,
+    last            = last,
+    timelapse_ids   = as.character(noon$Id),
+    timelapse_dates = noon$day,
+    missing_noon    = missing_noon,
+    obscured_ids    = as.character(TL_data$Id[is_obscured][order(dt[is_obscured])]),
+    obscured_days   = obscured_days,
+    effort_days     = total_days - length(obscured_days)
+  )
+}
+
+# "Jun 20, Jun 21, Jun 25" (or a shortened list if there are many)
+format_days <- function(days, max_shown = 15) {
+  txt <- format(days, "%b %d, %Y")
+  if (length(txt) > max_shown) {
+    txt <- c(txt[seq_len(max_shown)], sprintf("and %d more", length(txt) - max_shown))
+  }
+  paste(txt, collapse = "; ")
 }
 
 
@@ -303,6 +374,36 @@ run_checks <- function(raw) {
     }
   }
 
+  # Noon timelapse images and CameraObscured ------------------------------------
+  effort <- summarise_effort(TL_data)
+  if (length(effort$timelapse_ids) == 0) {
+    flag("Noon timelapse images",
+         "No noon timelapse images were found (images taken at 12:00). Camera effort is counted from the first image to the last.",
+         type = "info")
+  } else if (length(effort$missing_noon) > 0) {
+    n <- length(effort$missing_noon)
+    flag("Missing noon images",
+         sprintf("There is no noon timelapse image on %d day%s: %s. The camera may have stopped or been moved on these days. Check them, and adjust the camera effort if the camera wasn't working.",
+                 n, if (n == 1) "" else "s", format_days(effort$missing_noon)),
+         type = "review")
+  }
+
+  if (length(effort$obscured_days) > 0) {
+    dt <- suppressWarnings(as_datetime(TL_data$DateTime))
+    day <- as.Date(dt)
+    is_obscured <- TL_data$Species == "CameraObscured"
+    is_animal <- TL_data$Species != "" & !TL_data$Species %in% NOT_ANIMALS
+    clash <- sort(unique(day[is_obscured & !is.na(day) & day %in% day[is_animal]]))
+    if (length(clash) > 0) {
+      rows <- TL_data[day %in% clash & (is_obscured | is_animal), , drop = FALSE]
+      rows <- rows[order(rows$DateTime), , drop = FALSE]
+      flag("CameraObscured on a day with animals",
+           sprintf("CameraObscured is tagged on the same day as an animal (%s). If the camera could see the animal, it may not have been obscured all day. Check the CameraObscured tag, because obscured days are taken off the camera effort.",
+                   format_days(clash)),
+           rows, type = "review")
+    }
+  }
+
   issues_df <- tibble::tibble(
     check   = vapply(issues, function(x) x$check, character(1)),
     type    = vapply(issues, function(x) x$type, character(1)),
@@ -323,7 +424,8 @@ run_checks <- function(raw) {
       n_episodes   = max(TL_data$EpManual),
       locations    = setdiff(unique(a$Location), ""),
       classifiers  = setdiff(unique(a$Classifier), ""),
-      megadetector = MD
+      megadetector = MD,
+      effort       = effort
     )
   )
 }

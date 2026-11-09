@@ -20,11 +20,20 @@ shiny::runApp("path/to/Timelapse-Classification-QAQC")
 ```
 
 1. Click **Choose .ddb file…** and pick the `.ddb` in the folder you classified. The dialog
-   sometimes opens behind the browser window. You can also paste the path instead.
-2. **Checks tab:** fix the red **Fix** items and look over the yellow **Check** items. Click
+   sometimes opens behind the browser window.
+2. **Camera effort** (top of the page): total days from the first to the last image, the
+   number of noon timelapse images (and any days missing one), the days tagged
+   `CameraObscured`, and the camera effort (total days minus obscured days). Use **Review
+   noon images** or **Review CameraObscured images** to page through them.
+3. **Checks tab:** fix the red **Fix** items and look over the yellow **Check** items. Click
    an image name or **Review images** to open the viewer.
-3. **Review classifications tab:** click any row to see its images and episode, and correct
+4. **Review classifications tab:** click any row to see its images and episode, and correct
    the tags if needed.
+
+In the image viewer, the arrows on the image step through every image in the same episode,
+and the box above the form shows the episode's tags on every image in it. After saving any
+change, **Download tagging changes (CSV)** in the sidebar lists every field changed this
+session (old and new values). Download it before closing the app.
 
 **Close the folder in Timelapse before editing in this app.** Before your first change, the
 app saves a backup copy next to the `.ddb` (`TimelapseData.ddb.backup-<date-time>`).
@@ -32,3 +41,6 @@ app saves a backup copy next to the `.ddb` (`TimelapseData.ddb.backup-<date-time
 ## Try it
 
 Open `test_folder/TimelapseData.ddb`. Each test image has its planted mistake written on it.
+The folder has noon timelapse images for June 1–29 except June 20–21, and `CameraObscured`
+tags on June 14 (the same day as a black bear, so it warns) and June 22–24, giving 30 total
+days and 26 days of camera effort.
