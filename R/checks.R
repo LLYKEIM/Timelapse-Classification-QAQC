@@ -408,7 +408,7 @@ run_checks <- function(raw) {
       rows <- TL_data[day %in% clash & (is_obscured | is_animal), , drop = FALSE]
       rows <- rows[order(rows$DateTime), , drop = FALSE]
       flag("CameraObscured on a day with animals",
-           sprintf("CameraObscured is tagged on the same day as an animal (%s). If the camera could see the animal, it may not have been obscured all day. Check the CameraObscured tag, because obscured days are taken off the camera effort.",
+           sprintf("CameraObscured is tagged on the same day as an animal (%s). If the camera could see the animal, it may not have been obscured all day. Check the CameraObscured tag, to confirm camera was actually obscured.",
                    format_days(clash)),
            rows, type = "review")
     }
