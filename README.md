@@ -1,8 +1,9 @@
 # Timelapse Classification QA/QC
 
-Checks a Timelapse-classified camera folder for common classification errors, shows the
-flagged images, and lets you fix them in place. A second tab lets you review every
-classified image or episode.
+A simple R Shiny app used to QAQC image data tagged in Timelapse. The app allows you to
+browse for the .ddb file in the folder you just finished classifying, shows the flagged 
+images, and lets you edit the .ddb file directly in the app. A second tab lets you 
+review every classified image or episode so you can quickly review all tags.
 
 ## Install
 
