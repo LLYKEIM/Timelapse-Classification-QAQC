@@ -7,10 +7,7 @@ into the folder's `.ddb` file.
 ## First-time setup
 
 You only do this once per computer.
-
-1. **Install R** from <https://cran.r-project.org> (version 4.1 or newer).
-2. **Install RStudio** from <https://posit.co/download/rstudio-desktop/>.
-3. **Get the app.** Clone this repository to your computer (or on GitHub, click
+1. **Get the app.** Clone this repository to your computer (or on GitHub, click
    **Code → Download ZIP** and unzip it).
 
 You don't need to install any R packages yourself. The first time you start the app it
