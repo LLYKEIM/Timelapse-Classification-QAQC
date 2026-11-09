@@ -42,5 +42,6 @@ app saves a backup copy next to the `.ddb` (`TimelapseData.ddb.backup-<date-time
 
 Open `test_folder/TimelapseData.ddb`. Each test image has its planted mistake written on it.
 The folder has noon timelapse images for June 1–29 except June 20–21, and `CameraObscured`
-tags on June 14 (the same day as a black bear, so it warns) and June 22–24, giving 30 total
+tags on June 14 (the same day as a black bear, so it warns) and June 22–24, plus a second
+`CameraObscured` tag on June 23 (only one is allowed per day, so it warns). That gives 30 total
 days and 26 days of camera effort.

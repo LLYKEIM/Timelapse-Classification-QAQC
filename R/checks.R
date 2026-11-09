@@ -392,6 +392,17 @@ run_checks <- function(raw) {
     day <- as.Date(dt)
     is_obscured <- TL_data$Species == "CameraObscured"
     is_animal <- TL_data$Species != "" & !TL_data$Species %in% NOT_ANIMALS
+    obs_day <- day[is_obscured & !is.na(day)]
+    extra <- sort(unique(obs_day[duplicated(obs_day)]))
+    if (length(extra) > 0) {
+      rows <- TL_data[is_obscured & day %in% extra, , drop = FALSE]
+      rows <- rows[order(rows$DateTime), , drop = FALSE]
+      flag("More than one CameraObscured tag in a day",
+           sprintf("CameraObscured should be tagged only once per day, but these days have more than one: %s. Remove the extra tags so each obscured day is tagged once.",
+                   format_days(extra)),
+           rows, type = "review")
+    }
+
     clash <- sort(unique(day[is_obscured & !is.na(day) & day %in% day[is_animal]]))
     if (length(clash) > 0) {
       rows <- TL_data[day %in% clash & (is_obscured | is_animal), , drop = FALSE]
