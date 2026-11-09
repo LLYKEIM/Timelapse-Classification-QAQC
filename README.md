@@ -30,7 +30,7 @@ from the top right corner of the console window.
 
 ## Check a folder
 
-1. **Close the folder in Timelapse first.**
+1. If you just finished classifying, **close the image set in Timelapse first.**
 2. Click **Choose .ddb file…** and pick the `.ddb` in the folder you classified.
    (The file window sometimes opens behind your browser.)
 3. **Camera effort** (top of the page) shows the total days, noon images, days tagged
