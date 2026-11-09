@@ -147,7 +147,7 @@ ui <- page_sidebar(
     uiOutput("template_status"),
     div(class = "alert alert-warning small mb-0",
         strong("Before editing: "),
-        "close this folder in Timelapse. A backup copy of the .ddb is saved next to it before your first change."),
+        "close this folder in Timelapse. Saving changes only the fields you edit; everything else in the .ddb stays as it was."),
     uiOutput("download_ui"),
     uiOutput("changes_ui")
   ),
@@ -178,7 +178,6 @@ server <- function(input, output, session) {
   ddb_path   <- reactiveVal(NULL)
   img_base   <- reactiveVal(NULL)
   reload     <- reactiveVal(0)
-  backed_up  <- reactiveVal(character(0))
   viewer     <- reactiveVal(NULL)
   # Every field saved in this session: one row per field changed
   changes    <- reactiveVal(data.frame(
@@ -720,11 +719,6 @@ server <- function(input, output, session) {
 
     path <- ddb_path()
     tryCatch({
-      if (!path %in% backed_up()) {
-        bak <- backup_ddb(path)
-        backed_up(c(backed_up(), path))
-        showNotification(paste("Backup saved:", basename(bak)), duration = 6)
-      }
       write_ddb_fields(path, v$current, changed)
       changes(rbind(changes(), data.frame(
         saved_at = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),

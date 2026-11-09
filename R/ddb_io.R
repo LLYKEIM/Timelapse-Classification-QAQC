@@ -83,18 +83,10 @@ read_template <- function(path) {
 }
 
 
-# Copy the .ddb next to itself before the first edit.
-# The name doesn't end in .ddb, so Timelapse won't pick it up by mistake.
-backup_ddb <- function(path) {
-  backup <- paste0(path, ".backup-", format(Sys.time(), "%Y%m%d-%H%M%S"))
-  if (!file.copy(path, backup, overwrite = FALSE)) {
-    stop("Couldn't create a backup copy, so nothing was saved.")
-  }
-  backup
-}
-
-
 # Update fields for one image. `values` is a named list: field -> new value.
+# Only the named fields of that one row are written; every other row, field,
+# table and the schema are left exactly as they were. The update runs in a
+# transaction and is rolled back unless exactly one image was changed.
 write_ddb_fields <- function(path, id, values) {
   if (length(values) == 0) return(invisible(0))
   bad <- setdiff(names(values), EDIT_FIELDS)
@@ -106,9 +98,11 @@ write_ddb_fields <- function(path, id, values) {
   cols <- as.character(DBI::dbQuoteIdentifier(con, names(values)))
   sql <- paste0("UPDATE DataTable SET ", paste0(cols, " = ?", collapse = ", "),
                 " WHERE Id = ?")
-  n <- DBI::dbExecute(con, sql, params = c(unname(lapply(values, as.character)),
-                                           list(as.integer(id))))
-  if (n != 1) stop("Expected to update 1 image but updated ", n, ".")
+  DBI::dbWithTransaction(con, {
+    n <- DBI::dbExecute(con, sql, params = c(unname(lapply(values, as.character)),
+                                             list(as.integer(id))))
+    if (n != 1) stop("Expected to update 1 image but would have updated ", n, ", so nothing was saved.")
+  })
   invisible(n)
 }
 

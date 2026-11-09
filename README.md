@@ -35,8 +35,11 @@ and the box above the form shows the episode's tags on every image in it. After 
 change, **Download tagging changes (CSV)** in the sidebar lists every field changed this
 session (old and new values). Download it before closing the app.
 
-**Close the folder in Timelapse before editing in this app.** Before your first change, the
-app saves a backup copy next to the `.ddb` (`TimelapseData.ddb.backup-<date-time>`).
+**Close the folder in Timelapse before editing in this app.** Saving only changes the fields
+you edited on that one image. Everything else in the `.ddb` (other images, other fields, the
+template and the table layout) stays exactly as it was, so the `.ddb` still works in later
+workflows. The app doesn't make a backup copy; use **Download tagging changes (CSV)** as the
+record of what was changed and what the old values were.
 
 ## Try it
 
