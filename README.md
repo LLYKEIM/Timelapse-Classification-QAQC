@@ -22,7 +22,7 @@ If R asks whether to use a personal library, answer **Yes**.
 ## Start the app
 
 1. Open the project RStudio.
-2. Open the `app.R` file and click **Run App". Make sure you give it a second to load. Keep an
+2. Open the `app.R` file and click **Run App**. Make sure you give it a second to load. Keep an
    eye on the R Studio Console to check for any errors if the app doesn't seem to be loading correctly.
 
 To stop the app, close the app window. The app has stopped running if the small stop sign icon disappears 
