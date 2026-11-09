@@ -21,11 +21,12 @@ If R asks whether to use a personal library, answer **Yes**.
 
 ## Start the app
 
-1. Open RStudio.
-2. Click **File → Open File…** and open `run_app.R` from the app folder.
-3. Click **Source** (top right of the code pane). The app opens in your web browser.
+1. Open the project RStudio.
+2. Open the `app.R` file and click **Run App". Make sure you give it a second to load. Keep an
+   eye on the R Studio Console to check for any errors if the app doesn't seem to be loading correctly.
 
-To stop the app, close the browser tab and click the red **Stop** sign in RStudio's console.
+To stop the app, close the app window. The app has stopped running if the small stop sign icon disappears 
+from the top right corner of the console window.
 
 ## Check a folder
 
