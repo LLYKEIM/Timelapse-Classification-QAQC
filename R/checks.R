@@ -34,9 +34,9 @@ HUMANS <- c("Biker", "Hiker", "Horse Rider", "Quad/Vehicle/Motorbike",
 # Species values that aren't an animal (used by the CameraObscured same-day check)
 NOT_ANIMALS <- c(HUMANS, "CameraObscured", "FirstImage", "LastImage", "None")
 
-# The camera takes a timelapse image at noon each day. Any image taken between
-# 12:00:00 and 12:00:59 counts as that day's noon image.
-TIMELAPSE_TIME <- "12:00"
+# The camera takes a timelapse image at noon each day. Only images taken at
+# exactly 12:00:00 count as that day's noon image.
+TIMELAPSE_TIME <- "12:00:00"
 
 
 # Read the DataTable from a Timelapse .ddb file --------------------------------
@@ -131,8 +131,8 @@ summarise_effort <- function(TL_data) {
   first_day <- as.Date(first); last_day <- as.Date(last)
   total_days <- as.integer(last_day - first_day) + 1L
 
-  # Noon images: the earliest image in the noon minute on each day
-  is_noon <- ok & substr(clock, 1, 5) == TIMELAPSE_TIME
+  # Noon images: one image taken at exactly 12:00:00 on each day
+  is_noon <- ok & clock == TIMELAPSE_TIME
   noon <- TL_data[is_noon, , drop = FALSE]
   noon$day <- day[is_noon]
   noon$dt <- dt[is_noon]
@@ -141,9 +141,8 @@ summarise_effort <- function(TL_data) {
 
   # Days the camera was out at noon: skip the first day if it was set up after
   # noon, and the last day if it was picked up before noon
-  noon_start <- paste0(TIMELAPSE_TIME, ":00"); noon_end <- paste0(TIMELAPSE_TIME, ":59")
-  from <- first_day + if (format(first, "%H:%M:%S") > noon_end) 1L else 0L
-  to   <- last_day  - if (format(last, "%H:%M:%S") < noon_start) 1L else 0L
+  from <- first_day + if (format(first, "%H:%M:%S") > TIMELAPSE_TIME) 1L else 0L
+  to   <- last_day  - if (format(last, "%H:%M:%S") < TIMELAPSE_TIME) 1L else 0L
   expected <- if (from <= to) seq(from, to, by = "day") else empty_date
   missing_noon <- if (nrow(noon) > 0) expected[!expected %in% noon$day] else empty_date
 
@@ -378,7 +377,7 @@ run_checks <- function(raw) {
   effort <- summarise_effort(TL_data)
   if (length(effort$timelapse_ids) == 0) {
     flag("Noon timelapse images",
-         "No noon timelapse images were found (images taken at 12:00). Camera effort is counted from the first image to the last.",
+         "No noon timelapse images were found (images taken at exactly 12:00:00). Camera effort is counted from the first image to the last.",
          type = "info")
   } else if (length(effort$missing_noon) > 0) {
     n <- length(effort$missing_noon)
