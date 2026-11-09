@@ -7,7 +7,13 @@ into the folder's `.ddb` file.
 ## First-time setup
 
 You only do this once per computer.
-1. **Get the app.** Clone this repository to your computer using the instructions outlined in the Intro to Git documents 
+
+1. **Get the app.** Clone this repository into RStudio by following
+   [Clone an existing team repo](https://github.com/LLYKEIM/LLYKEIM-intro-to-git/blob/main/docs/03-r-rstudio-projects.md#a-clone-an-existing-team-repo-most-common)
+   in the Intro to Git handbook. Clone it into your **GitHub folder**: `C:\Users\<name>\NotSynced\GitHub`
+   if OneDrive syncs your Desktop, otherwise `Desktop\GitHub`
+   ([how to check](https://github.com/LLYKEIM/LLYKEIM-intro-to-git/blob/main/docs/team-conventions.md#where-to-keep-projects)).
+   Don't use **Download ZIP**, because a ZIP copy can't pull updates.
 
 You don't need to install any R packages yourself. The first time you start the app it
 installs everything it needs, which can take a few minutes and needs an internet connection.
@@ -49,5 +55,6 @@ it, so you can see what each check catches.
 
 ## Getting updates
 
-If you cloned the repository, pull the latest changes (for example **Pull** in GitHub
-Desktop) before you start the app. If you downloaded a ZIP, download a new one.
+Before you start the app, open the project in RStudio and click **Pull** in the **Git** tab
+to get the latest version (see the handbook's
+[everyday workflow](https://github.com/LLYKEIM/LLYKEIM-intro-to-git/blob/main/docs/06-everyday-workflow.md#the-daily-loop)).
