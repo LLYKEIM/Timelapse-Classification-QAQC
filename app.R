@@ -1,5 +1,5 @@
 # Timelapse Classification QA/QC
-# Start it with run_app.R (open it in RStudio and click Source), or
+# Start it by opening this file in RStudio and clicking Run App, or with
 # shiny::runApp("path/to/Timelapse-Classification-QAQC")
 #
 # This app is meant to run on your own computer: it reads the .ddb in place,

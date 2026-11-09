@@ -17,7 +17,8 @@ You only do this once per computer.
 
 You don't need to install any R packages yourself. The first time you start the app it
 installs everything it needs, which can take a few minutes and needs an internet connection.
-If R asks whether to use a personal library, answer **Yes**.
+If RStudio asks to install the **shiny** package, or R asks whether to use a personal
+library, answer **Yes**.
 
 ## Start the app
 
