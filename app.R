@@ -1,17 +1,30 @@
 # Timelapse Classification QA/QC
-# Run with: shiny::runApp("path/to/Timelapse-Classification-QAQC")
+# Start it with run_app.R (open it in RStudio and click Source), or
+# shiny::runApp("path/to/Timelapse-Classification-QAQC")
 #
 # This app is meant to run on your own computer: it reads the .ddb in place,
 # shows images from the same folder, and saves edits back into the .ddb.
 
-# Stop early with a clear message if a package is missing
+# Install any missing packages automatically (first launch only), then load them
 local({
   needed <- c("shiny", "bslib", "DT", "dplyr", "tidyr", "stringr", "lubridate",
               "RSQLite", "DBI", "jsonlite")
   missing <- needed[!vapply(needed, requireNamespace, logical(1), quietly = TRUE)]
   if (length(missing)) {
-    stop("Install these packages first:\n  install.packages(c(",
-         paste0('"', missing, '"', collapse = ", "), "))", call. = FALSE)
+    message("Installing missing R packages (one-time setup, may take a few minutes): ",
+            paste(missing, collapse = ", "))
+    repos <- getOption("repos")
+    cran <- if ("CRAN" %in% names(repos)) unname(repos[["CRAN"]]) else ""
+    if (is.na(cran) || !nzchar(cran) || cran == "@CRAN@") {
+      repos <- c(CRAN = "https://cloud.r-project.org")
+    }
+    try(install.packages(missing, repos = repos), silent = TRUE)
+    still_missing <- missing[!vapply(missing, requireNamespace, logical(1), quietly = TRUE)]
+    if (length(still_missing)) {
+      stop("Couldn't install these packages automatically. Check your internet connection, ",
+           "then run this in R and start the app again:\n  install.packages(c(",
+           paste0('"', still_missing, '"', collapse = ", "), "))", call. = FALSE)
+    }
   }
 })
 

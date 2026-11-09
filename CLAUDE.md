@@ -6,14 +6,16 @@ on Windows. The roadmap is in `docs/WORKPLAN.md`; work through it one phase at a
 
 ## Commands
 
-- Run the app: `Rscript -e 'shiny::runApp(".", launch.browser = TRUE)'`
+- Run the app: `Rscript run_app.R` (what users do: open `run_app.R` in RStudio and click Source).
+  It installs shiny if missing; `app.R` installs the other packages if missing.
 - Run checks without the UI:
   `source("R/checks.R"); run_checks(read_timelapse_ddb("test_folder/TimelapseData.ddb"))$issues`
 - Tests (once Phase 1 exists): `Rscript -e 'testthat::test_dir("tests/testthat")'`
 
 ## Layout
 
-- `app.R`: UI and server. Sources `R/checks.R` and `R/ddb_io.R` explicitly.
+- `app.R`: UI and server. Installs missing packages, then sources `R/checks.R` and `R/ddb_io.R`
+  explicitly. `R/_disable_autoload.R` stops Shiny sourcing `R/` before that install runs.
 - `R/checks.R`: `prepare_timelapse()` formats data and assigns episodes; `run_checks()` holds
   all rules. Each rule calls `flag(check, message, rows, type)`, where `type` is
   `"issue"` (Fix), `"review"` (Check) or `"info"` (Note).
