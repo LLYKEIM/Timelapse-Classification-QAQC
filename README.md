@@ -7,8 +7,7 @@ into the folder's `.ddb` file.
 ## First-time setup
 
 You only do this once per computer.
-1. **Get the app.** Clone this repository to your computer (or on GitHub, click
-   **Code → Download ZIP** and unzip it).
+1. **Get the app.** Clone this repository to your computer using the instructions outlined in the Intro to Git documents 
 
 You don't need to install any R packages yourself. The first time you start the app it
 installs everything it needs, which can take a few minutes and needs an internet connection.
