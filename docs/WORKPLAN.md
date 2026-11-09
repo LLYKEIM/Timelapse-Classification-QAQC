@@ -34,7 +34,7 @@ Working, per testing on Maddy's machine:
 - Choose a .ddb by file dialog (the pasted-path box was removed in v0.4)
 - All checks from the original script, grouped into Fix / Check / Note cards, plus CSV export
 - Image viewer with episode thumbnail strip, previous/next, edit form, save with automatic
-  backup, re-check after save
+  re-check after save (no backup copies since v0.5; saves change only the edited fields)
 
 New in v0.3, **not yet confirmed on a real folder**:
 - Images served by R (to handle spaces in names and OneDrive files)
@@ -97,7 +97,7 @@ fixture should use a trimmed template.
   nothing.
 - Tests for `read_template()` (JSON `ChoiceListNonEmpty`, pipe lists, `<EMPTY>`, Note fields
   ignored), `write_ddb_fields()` (round trip, rejects unknown fields, exactly one row),
-  `backup_ddb()`, `serve_image()` (spaces, backslashes in RelativePath, `..` rejected).
+  `serve_image()` (spaces, backslashes in RelativePath, `..` rejected).
 - **Done when:** `testthat::test_dir("tests/testthat")` passes and covers every check.
 
 ### Phase 2 – Fix known gaps
@@ -148,7 +148,7 @@ fixture should use a trimmed template.
 ## 6. Risks
 
 - **Editing while Timelapse is open** can lose one side's changes. Mitigation: banner,
-  locked-file message, change detection (Phase 2), backups.
+  locked-file message, change detection (Phase 2), tagging-changes CSV.
 - **OneDrive sync conflicts** can create duplicate .ddb files. Mitigation: warning (Phase 2);
   recommend "Always keep on this device" for folders being worked on.
 - **Camera data in git**: blocked by `.gitignore`; double-check before the first push.

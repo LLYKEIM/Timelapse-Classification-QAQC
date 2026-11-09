@@ -17,7 +17,7 @@ on Windows. The roadmap is in `docs/WORKPLAN.md`; work through it one phase at a
 - `R/checks.R`: `prepare_timelapse()` formats data and assigns episodes; `run_checks()` holds
   all rules. Each rule calls `flag(check, message, rows, type)`, where `type` is
   `"issue"` (Fix), `"review"` (Check) or `"info"` (Note).
-- `R/ddb_io.R`: file dialog, template parsing, image serving, backup, `write_ddb_fields()`.
+- `R/ddb_io.R`: file dialog, template parsing, image serving, `write_ddb_fields()`.
 - `test_folder/`: synthetic images and .ddb with planted errors (each image has its error
   written on it).
 
@@ -37,8 +37,10 @@ on Windows. The roadmap is in `docs/WORKPLAN.md`; work through it one phase at a
 
 - **Never commit real data**: no real .ddb/.tdb files, images, or `*.backup-*` files.
   Only `test_folder/` is allowed.
-- Only write to a .ddb through `write_ddb_fields()`, and only after `backup_ddb()` has run
-  for that file in the session.
+- Only write to a .ddb through `write_ddb_fields()`, and only the fields the user changed on
+  that one image. Everything else in the .ddb (other rows and fields, other tables, schema)
+  must stay identical, because the .ddb is used in later workflows. The app makes no backup
+  copies (Maddy's call, Nov 2026); the tagging-changes CSV is the record of edits.
 - Keep the check messages in plain language for classifiers. When a check's logic changes,
   say so in the PR description, because it changes what classifiers are told.
 - Don't add package dependencies without asking. Optional extras (e.g. `magick`) must
